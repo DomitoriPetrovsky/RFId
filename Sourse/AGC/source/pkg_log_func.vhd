@@ -8,14 +8,14 @@ package pkg_log_func is
 	
 	constant BITNESS   : NATURAL := 16;
 	constant TABLE_LEN : NATURAL := 3;
-	type return_data is array (natural range <>) of std_logic_vector(BITNESS-1 downto 0);
+	type return_data is array (NATURAL range <>) of std_logic_vector(BITNESS-1 downto 0);
 	
 	
 	
-	function  formation_log_table (log_table_len : natural)
+	function  formation_log_table (log_table_len : NATURAL; BITNESS : NATURAL)
 	return return_data;
 	
-	function  formation_exp_table (exp_table_len : natural)
+	function  formation_exp_table (exp_table_len : NATURAL)
 	return return_data;
 
 	function all_or (a  : std_logic_vector) 
@@ -28,7 +28,7 @@ end pkg_log_func;
 
 package body pkg_log_func is
 
-	function formation_log_table (log_table_len : NATURAL,  BITNESS : NATURAL)
+	function formation_log_table (log_table_len : NATURAL;  BITNESS : NATURAL)
 	return return_data is
 	
 	variable output	: 	return_data(0 to 2**log_table_len-1 );

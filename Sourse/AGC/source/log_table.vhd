@@ -20,7 +20,7 @@ architecture rtl of log_table is
 
 	--type type_table is array (natural range <>) of std_logic_vector(BITNESS-1 downto 0);
 	
-	signal log_table : return_data(0 to 2**TABLE_LENGTH-1) := formation_log_table(TABLE_LENGTH);
+	signal log_table : return_data(0 to 2**TABLE_LENGTH-1) := formation_log_table(TABLE_LENGTH, BITNESS);
 
 begin
 

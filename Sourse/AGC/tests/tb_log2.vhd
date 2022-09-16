@@ -14,27 +14,46 @@ end tb_log2;
 
 architecture rtl of tb_log2 is
 
-	component log2 is 
-		generic(
+	component  log2 is 
+	generic(
 		BITNESS 		: NATURAL;
+		IWL				: NATURAL;
+		IFL				: NATURAL;
+		OWL				: NATURAL;
+		OFL				: NATURAL;
 		TABLE_LENGTH	: NATURAL);
 	port(
-		input 	: in	std_logic_vector(BITNESS-1 downto 0);
-		output	: out	std_logic_vector(BITNESS-1+5 downto 0));
-
+		input 	: in	std_logic_vector(IWL-1 downto 0);
+		output	: out	std_logic_vector(OWL-1 downto 0));
 	end component;
 
 
 constant table_len : natural := 7; 
 constant bitness	: natural := 16;
-signal test_in : std_logic_vector(bitness-1 downto 0);
-signal test_out : std_logic_vector(bitness-1+5 downto 0);
+
+constant		IWL	: NATURAL := 16;
+constant		IFL	: NATURAL := 15;
+constant		OWL	: NATURAL := 20;
+constant		OFL	: NATURAL := 15;
+
+constant		TEST1	: NATURAL := 20;
+constant		TEST2	: NATURAL := 21;
+
+
+signal test_in : std_logic_vector(IWL-1 downto 0);
+signal test_out : std_logic_vector(OWL-1 downto 0);
 
 
 begin
-
+	--если условие верно то выводим ошибку!
+	assert TEST1>TEST2
+	report "we have a problem!"
+	severity error;
+	--severity failure;
 	process
 	begin
+		test_in <= "0001000000010110"; --0.5
+		wait for 5 ns;
 		test_in <= (others => '0');
 		wait for 5 ns;
 		test_in <= (others => '1');
@@ -54,8 +73,8 @@ begin
 	end process;
 
 
-u2: log2 	generic map(bitness, table_len)
-				port map(test_in, test_out);
+u2: log2 	generic map(bitness,  IWL, IFL, OWL, OFL, table_len)
+			port map(test_in, test_out);
 
 	
 end rtl;

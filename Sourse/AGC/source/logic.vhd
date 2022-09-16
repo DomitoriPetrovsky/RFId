@@ -9,22 +9,23 @@ use work.pkg_log_func.all;
 
 entity logic is 
 	generic(
-		BITNESS 		: NATURAL);
+		BITNESS 	: NATURAL;
+		n_size 		: NATURAL);
 	port(
 		input 	: in	std_logic_vector(BITNESS-1 downto 0);
 		out_x	: out	std_logic_vector(BITNESS-1 downto 0);
-		out_n	: out	std_logic_vector(4 downto 0));
+		out_n	: out	std_logic_vector(n_size-1 downto 0));
 end logic;
 
 architecture rtl of logic is
-signal n :  signed(out_n'length-1 downto 0);
+signal n :  signed(n_size-1 downto 0);
 signal x :	std_logic_vector(BITNESS-1 downto 0);
 	
 begin
 
 u1:	process(input)
 	
-	variable zeros	: signed(out_n'length-1 downto 0);
+	variable zeros	: signed(n_size-1 downto 0);
 	variable shift	: std_logic_vector(BITNESS-1 downto 0);
 	variable flag	: std_logic;
 	
