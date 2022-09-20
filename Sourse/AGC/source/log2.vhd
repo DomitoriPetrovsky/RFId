@@ -79,15 +79,15 @@ signal temp_out  	:	std_logic_vector(OWL-1 downto 0) 			:= (others => '0');
 
 begin
 	
-u1: logic 	generic map(BITNESS, n_size)
-			port map(input, x, n);
+l: logic 	generic map(BITNESS, n_size)
+				port map(input, x, n);
 
 	hight 	<= unsigned(x(x'left downto x'length/2));
 	r 		<= unsigned(x((x'length/2)-1 downto 0));
 	I 		<= std_logic_vector(hight - (2**TABLE_LENGTH) );
 
-u2: log_table 	generic map(BITNESS, TABLE_LENGTH)
-				port map(I( I'high-1 downto 0), table_log, table_logp);
+table: log_table 	generic map(BITNESS, TABLE_LENGTH)
+					port map(I( I'high-1 downto 0), table_log, table_logp);
 	
 	
 add1: add_sgn_sat 	generic map(IWL => IWL, sub => true )	

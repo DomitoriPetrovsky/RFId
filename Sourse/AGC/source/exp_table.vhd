@@ -12,8 +12,7 @@ entity exp_table is
 		TABLE_LENGTH	: NATURAL);
 	port(
 		adress 	: in	std_logic_vector(TABLE_LENGTH-1 downto 0);
-		output_i	: out	std_logic_vector(BITNESS-1 downto 0);
-		output_ip	: out	std_logic_vector(BITNESS-1 downto 0));
+		output	: out	std_logic_vector(BITNESS-1 downto 0));
 end exp_table;
 
 architecture rtl of exp_table is
@@ -25,8 +24,7 @@ begin
 u1:	process(adress)
 	begin
 	
-		output_i <= exp_table(natural(to_integer(unsigned(adress))));
-		output_ip <= exp_table(natural(to_integer(unsigned(adress) + 1)));
+		output <= exp_table(natural(to_integer(unsigned(adress))));
 	end process;
 
 	

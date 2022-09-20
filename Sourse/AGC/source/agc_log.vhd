@@ -13,6 +13,8 @@ entity agc_log is
 		IIR_WCL : NATURAL;
 		TABLE_LENGTH : NATURAL);
 	port(
+		--reset	: in	std_logic;
+		--en		: in	std_logic;
 		clk		: in	std_logic;
 		wr_coef	: in 	std_logic;
 		input 	: in	std_logic_vector(BITNESS-1 downto 0);
@@ -24,17 +26,23 @@ end agc_log;
 
 architecture rtl of agc_log is
 
-	entity exp2 is 
+	component   exp2 is 
 	generic(
 		BITNESS 		: NATURAL;
+		DIWL			: NATURAL;
+		DIFL			: NATURAL;
+		GIWL			: NATURAL;
+		GIFL			: NATURAL;
+		OWL				: NATURAL;
+		OFL				: NATURAL;
 		TABLE_LENGTH	: NATURAL);
 	port(
-		input_gain 	: in	std_logic_vector(BITNESS-1+5 downto 0);
-		input_data	: in 	std_logic_vector(BITNESS-1 downto 0);
-		output	: out	std_logic_vector(BITNESS-1 downto 0))
-	end exp2;
+		input_gain 	: in	std_logic_vector(GIWL-1 downto 0);
+		input_data	: in 	std_logic_vector(DIWL-1 downto 0);
+		output		: out	std_logic_vector(OWL-1 downto 0));
+	end component;
 	
-	entity iir_filter_exp_averaging is 
+	component iir_filter_exp_averaging is 
 	generic(
 		BITNESS 	: NATURAL;
 		CWL			: NATURAL);
@@ -43,38 +51,56 @@ architecture rtl of agc_log is
 		coef		: in	std_logic_vector(CWL-1 downto 0);
 		input 		: in	std_logic_vector(BITNESS-1 downto 0);
 		output		: out	std_logic_vector(BITNESS-1 downto 0));
-	end iir_filter_exp_averaging;
+	end component;
 
-	entity log2 is 
+	component log2 is 
 	generic(
-		BITNESS 		: NATURAL;
-		TABLE_LENGTH	: NATURAL);
+		BITNESS 		: NATURAL := 16;
+		IWL				: NATURAL := 16;
+		IFL				: NATURAL := 15;
+		OWL				: NATURAL := 20;
+		OFL				: NATURAL := 15;
+		TABLE_LENGTH	: NATURAL := 7);
 	port(
-		input 	: in	std_logic_vector(BITNESS-1 downto 0);
-		output	: out	std_logic_vector(BITNESS-1+5 downto 0));
-	end log2;
+		input 	: in	std_logic_vector(IWL-1 downto 0);
+		output	: out	std_logic_vector(OWL-1 downto 0));
+	end component;
+
+	component add_sgn_sat IS
+	GENERIC(
+		IWL : natural;
+		sub : boolean
+		);
+	PORT(
+		A : IN STD_LOGIC_VECTOR(IWL-1 downto 0);
+		B : IN STD_LOGIC_VECTOR(IWL-1 downto 0);
+		C : OUT STD_LOGIC_VECTOR(IWL-1 downto 0)
+		);
+	end component;
+
+	constant LogWL: NATURAL:= log_len(BITNESS);
 
 
 	signal temp_out 	: std_logic_vector(BITNESS-1 downto 0)				:= (others => '0');
 	signal squaer 		: signed(BITNESS*2-1 downto 0) 				:= (others => '0');
 	signal after_squaer : signed(BITNESS-1 downto 0) 				:= (others => '0');
 	
-	signal iir_filter	: signed(BITNESS-1 downto 0)				:= (others => '0');
+	signal iir_filter	: std_logic_vector(BITNESS-1 downto 0)				:= (others => '0');
 	
-	signal after_log	: signed(BITNESS-1+5 downto 0)				:= (others => '0');
+	signal after_log	: std_logic_vector(LogWL-1 downto 0)				:= (others => '0');
 	
-	signal rg_R			: signed(BITNESS-1+5 downto 0) 				:= (others => '0');
-	signal rg_alfa 		: signed(BITNESS-1+5 downto 0) 				:= (others => '0');
+	signal rg_R			: std_logic_vector(LogWL-1 downto 0) 				:= (others => '0');
+	signal rg_alfa 		: signed(BITNESS-1 downto 0) 				:= (others => '0');
 	
-	signal after_r		: signed(BITNESS-1+5 downto 0) 				:= (others => '0');
+	signal after_r		: std_logic_vector(LogWL-1 downto 0) 				:= (others => '0');
 
 	signal after_a		: signed(after_r'length+rg_alfa'length-1 downto 0) 				:= (others => '0');
-	signal short_after_a: signed(BITNESS-1+5 downto 0) 				:= (others => '0');
+	signal short_after_a: std_logic_vector(LogWL-1 downto 0) 				:= (others => '0');
 
-	signal prev_summ 	: signed(BITNESS-1+5 downto 0) 				:= (others => '0');
+	--signal prev_summ 	: signed(LogWL-1 downto 0) 				:= (others => '0');
 
-	signal summ 		: signed(BITNESS-1+5 downto 0) 				:= (others => '0');
-	signal delay 		: signed(BITNESS-1+5 downto 0) 				:= (others => '0');
+	signal summ 		: std_logic_vector(LogWL-1 downto 0) 				:= (others => '0');
+	signal delay 		: std_logic_vector(LogWL-1 downto 0) 				:= (others => '0');
 	
 	signal temp_in 		: std_logic_vector(BITNESS-1 downto 0) 				:= (others => '0');
 	
@@ -100,7 +126,7 @@ begin
 	begin 
 		if(rising_edge(clk)) then 
 			if(wr_coef = '1') then
-				rg_R <= resize(signed(R), rg_R'length);
+				rg_R <= std_logic_vector(resize(signed(R), rg_R'length) sll 4);
 				rg_alfa <= resize(signed(alfa), rg_alfa'length);
 			end if;
 		end if;
@@ -109,8 +135,17 @@ begin
 	-------------------
 	--anti-log
 	-------------------
-exp: exp2	generic map(BITNESS, TABLE_LENGTH)
-			port map(delay, temp_in, temp_out);
+exp: exp2	generic map(BITNESS => BITNESS,
+						DIWL => BITNESS,
+						DIFL => BITNESS-1,
+						GIWL => LogWL,
+						GIFL => BITNESS-1,
+						OWL  => BITNESS,
+						OFL  => BITNESS-1,
+						TABLE_LENGTH => TABLE_LENGTH)
+			port map(	input_gain => delay, 
+						input_data => temp_in, 
+						output => temp_out);
 	
 	
 	-------------------
@@ -126,56 +161,61 @@ exp: exp2	generic map(BITNESS, TABLE_LENGTH)
 	-------------------
 	--iir filter
 	-------------------
-iir: iir_filter_exp_averaging 	generic map(BITNESS, IIR_WCL)
-								port map(clk,iir_coef, after_squaer, iir_filter);
+iir: iir_filter_exp_averaging 	generic map(BITNESS => BITNESS,
+											CWL => IIR_WCL)
+								port map(	clk => clk,
+											coef => iir_coef, 
+											input => std_logic_vector(after_squaer), 
+											output => iir_filter);
 	
 	
 	-------------------
 	--table log2
 	-------------------
-log: log2 	generic map(BITNESS, TABLE_LENGTH)
-			port map(iir_filter, after_log);
+log: log2 	generic map(BITNESS => BITNESS,
+						IWL => BITNESS,
+						IFL => BITNESS-1,
+						OWL => LogWL,
+						OFL => BITNESS-1,
+						TABLE_LENGTH => TABLE_LENGTH)
+			port map(	input => iir_filter, 
+						output => after_log);
 	
 	-------------------
 	--отличиет от уровня 
 	-------------------
-	after_r <= signed(rg_R) - signed(after_log); 
+subR: add_sgn_sat 	generic map(IWL => LogWL, 
+								sub => TRUE)
+					port map(A => rg_R,
+							 B => after_log,
+							 C => after_r);
+	--after_r <= signed(rg_R) - signed(after_log); 
 	
 	-------------------
 	--домнажение на переменную формурующую постоянную времении системы
 	-------------------
-	after_a <= (signed(rg_alfa) * after_r) sll 1; 
+	after_a <= (signed(rg_alfa) * signed(after_r)) sll 1; 
 	
 	
 	-------------------
 	--truncation after mutl
 	-------------------
-	short_after_a <= after_a(after_a'left downto after_a'left-(BITNESS-1+5));
+	short_after_a <= std_logic_vector(after_a(after_a'left downto after_a'left-(LogWL-1)));
 	
 	-------------------
 	--extension of the sign
 	-------------------
-	prev_summ <= resize(short_after_a, prev_summ'length ); -- приводим к варианту для суммирования 18 разрядов
+	--prev_summ <= resize(short_after_a, prev_summ'length ); -- приводим к варианту для суммирования 18 разрядов
 
 	-------------------
 	--adder with overflow control 
 	-------------------
-add: process(delay, prev_summ)
-	constant WL : NATURAL := delay'length;
-	variable add_v : signed(WL downto 0);
-	variable add_sat_v : signed(WL-1 downto 0);
-	begin
-		add_sat_v := (others => '0');
-		add_v := resize(delay, WL+1) + resize(prev_summ, WL+1);
-		if add_v(WL) /= add_v(WL-1) then
-			add_sat_v(WL-1) := add_v(WL);
-			add_sat_v(WL-2 downto 0) := (OTHERS => add_v(WL-1));
-		else
-			add_sat_v := add_v(WL-1 downto 0);
-		end if;
-		summ <= add_sat_v;
-	
-	end process;
+addA: add_sgn_sat 	generic map(IWL => LogWL, 
+								sub => FALSE)
+					port map(A => delay,
+							 B => short_after_a,
+							 C => summ);
+
 	
 	-------------------
 	--accumulator 

@@ -18,6 +18,9 @@ package pkg_log_func is
 	function  formation_exp_table (exp_table_len : NATURAL)
 	return return_data;
 
+	function log_len (a  : NATURAL) 
+	return NATURAL;
+
 	function all_or (a  : std_logic_vector) 
 	return boolean;
 	
@@ -86,6 +89,25 @@ package body pkg_log_func is
 	
 	end function formation_exp_table;
 	
+	
+	function log_len (a  : NATURAL) 
+	return NATURAL is
+		variable l : REAL;
+		variable r : REAL;
+		variable t : REAL;
+		variable res : NATURAL;
+	begin 
+		l := LOG2(REAL(a));
+		r := CEIL(l);
+		if (r = l) then 
+			res := a + NATURAL(INTEGER(r));
+		else
+			res := a + NATURAL(INTEGER(r)) + 1;
+		end if;
+		
+		return res;
+	
+	end function log_len;
 	
 	
 	function all_or (a  : std_logic_vector) return boolean is
