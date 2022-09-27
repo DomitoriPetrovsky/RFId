@@ -55,8 +55,12 @@ signal r : std_logic_vector(bitness-1 downto 0) := (others => '0');
 
 signal clk : std_logic := '0';
 signal wr_coef : std_logic := '0';
+
+signal t : std_logic_vector(3 downto 0) := "1111";
+signal t1: std_logic_vector(3 downto 0):= "1101";
+signal t2 : std_logic_vector(3 downto 0);
 begin
-	
+	t2 <= t1 xor t;
 	
 	process
 	begin
@@ -69,13 +73,29 @@ begin
 	process
 	begin
 		wr_coef <= '1';
-		alpha 	<= "0000000010000000";
+		alpha 	<= "0000011110000000";
 		iirCoef <= "00100";
 		--r 		<= "0111110000000000";
 		--r 		<= "0011111001010110";
 		--r <= "0100000000000000";
 		r <= x"E523";
 		--r <= (others => '0');
+		wait for 10 ns;
+		wr_coef <= '0';
+		wait for 22000 ns;
+		wr_coef <= '1';
+		alpha 	<= "0000101000000000";
+		iirCoef <= "00100";
+		r <= x"d000";
+		--r <= (others => '0');
+		wait for 10 ns;
+		wr_coef <= '0';
+		wait for 22000 ns;
+		wr_coef <= '1';
+		alpha 	<= "0000101000000000";
+		iirCoef <= "00100";
+		r <= x"F631";
+		--r <= (others => '0');s
 		wait for 10 ns;
 		wr_coef <= '0';
 		wait;
