@@ -19,18 +19,18 @@ end fir_da_iter;
 
 architecture rtl of fir_da_iter is
 
-	component ring_shift_rg_mas is 
+	component  buf_line_da_fir is 
 	generic(
-		IWL			: NATURAL;
-		numb_reg	: NATURAL;
-		shLeft		: BOOlEAN);
+		IWL		: NATURAL := 16;
+		ORDER	: NATURAL := 4;
+		shLeft	: BOOlEAN := FALSE);
 	port(
-		clk			: in 	std_logic;
-		nrst			: in	std_logic;
-		shR			: in	std_logic;
-		input	 	: in	std_logic_vector(IWL-1 downto 0);
-		cout		: out	std_logic_vector(numb_reg-1 downto 0);
-		output		: out	std_logic_vector(IWL-1 downto 0));
+		clk		: in 	std_logic;
+		en 		: in 	std_logic;
+		nrst	: in	std_logic;
+		shRec	: in 	std_logic;
+		input	: in	std_logic_vector(IWL-1 downto 0);
+		output	: out	std_logic_vector(ORDER-1 downto 0));
 	end component;
 
 	component counter is 
@@ -64,15 +64,18 @@ architecture rtl of fir_da_iter is
 
 	component control_unit_fir_da_iter is 
 	generic(
-		ICL		: NATURAL);
+		ICL		: NATURAL := 5);
 	port(
-		clk		: in 	std_logic;
-		nrst	: in	std_logic;
-		counter	: in 	std_logic_vector(ICL downto 0);
-		rg_nrst	: out	std_logic;
-		done	: out 	std_logic;
-		add_sub	: out 	std_logic;
-		shR		: out 	std_logic);
+		clk			: in 	std_logic;
+		nrst		: in	std_logic;
+		counter		: in 	std_logic_vector(ICL-1 downto 0);
+		count_nrst 	: out 	std_logic;
+		buf_en		: out 	std_logic;
+		buf_shRec	: out 	std_logic;
+		add_sub		: out 	std_logic;
+		rg_nrst		: out 	std_logic;
+		rg_en		: out 	std_logic;
+		res			: out 	std_logic);
 	end component;
 
 	constant count_wl		: NATURAL := 4;
@@ -90,27 +93,33 @@ architecture rtl of fir_da_iter is
 	signal table_adr 		: std_logic_vector(ORDER-1 downto 0);
 	signal regs_out 		: std_logic_vector(IWL-1 downto 0);
 	
-	signal rg_sum_nrst 		: std_logic;
-	signal rg_out_st 		: std_logic;
-	signal add_sub 			: std_logic;
-	signal shift_recording 	: std_logic;
 	
+	signal count_nrst		: std_logic;
+	signal buf_en			: std_logic;
+	signal buf_shRec		: std_logic;
+	signal add_sub 			: std_logic;
+	signal rg_sum_nrst 		: std_logic;
+	signal rg_sum_en 		: std_logic;	
+	signal rg_out_st 		: std_logic;
+	
+
 
 begin
 	
-u_regs: ring_shift_rg_mas 
+buf_line: buf_line_da_fir 
 		generic map(IWL => IWL, 
-					numb_reg => ORDER,
+					ORDER => ORDER,
 					shLeft => FALSE) 
 		port map(	clk => clk,
+					en => buf_en,
 					nrst => nrst,
-					shR => shift_recording,
+					shRec => buf_shRec,
 					input => input,
-					cout => table_adr,
-					output => regs_out);
+					output => table_adr);
 	
 u_rom: ROM
-		generic map(DWL => IWL, AWL => ORDER)
+		generic map(DWL => IWL, 
+					AWL => ORDER)
 		port map(	adress => table_adr,
 					data_out => table_value);
 	
@@ -131,7 +140,9 @@ rg1: process(clk)
 			if (rg_sum_nrst = '0') then
 				rg_sum <= (others => '0');
 			else
-				rg_sum <=  std_logic_vector(sum);
+				if rg_sum_en = '1' then 
+					rg_sum <=  std_logic_vector(sum);
+				end if;
 			end if;
 		end if;	
 	end process;
@@ -139,18 +150,22 @@ rg1: process(clk)
 u_count: counter 
 		generic map(IWL => count_wl)
 		port map(	clk => clk, 
-					nrst => nrst, 
+					nrst => count_nrst, 
 					rst_level => "1000",
 					output => count);
+					
 u_control: control_unit_fir_da_iter
 		generic map(ICL => count_wl)
 		port map(	clk => clk, 
 					nrst => nrst, 
 					counter => count, 
-					rg_nrst	=> rg_sum_nrst,
-					done	=> rg_out_st,
-					add_sub	=> add_sub,
-					shR		=> shift_recording);
+					count_nrst => count_nrst,
+					buf_en => buf_en, 
+					buf_shRec => buf_shRec, 
+					add_sub => add_sub, 
+					rg_nrst => rg_sum_nrst, 
+					rg_en => rg_sum_en,
+					res => rg_out_st);
 	
 	
 rg2: process(clk) 

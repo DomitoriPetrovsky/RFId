@@ -55,10 +55,12 @@ begin
 		wait for 40 ns;
 		input <= (others => '0');
 		wait for 10 ns;
+		--input <= "00000001";
 		wait;
 	end process;
 
-u: fir_da_iter 	generic map(IWL => bitness, ORDER => 4)
+u: fir_da_iter 	generic map(IWL => bitness, 
+							ORDER => 4)
 				port map(clk => clk,
 						nrst =>  nrst,
 						input => input,

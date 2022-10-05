@@ -13,7 +13,7 @@ entity ring_shift_rg_with_parallel_record is
 		shLeft		: BOOlEAN := FALSE);
 	port(
 		clk			: in 	std_logic;
-		nrst			: in	std_logic;
+		nrst		: in	std_logic;
 		shR			: in	std_logic;
 		input	 	: in	std_logic_vector(IWL-1 downto 0);
 		cout		: out	std_logic;
