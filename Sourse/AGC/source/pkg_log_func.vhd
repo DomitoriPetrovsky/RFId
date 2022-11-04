@@ -7,7 +7,7 @@ use IEEE.MATH_REAL.ALL;
 package pkg_log_func is
 	
 	constant BITNESS   : NATURAL := 16;
-	constant TABLE_LEN : NATURAL := 3;
+	constant TABLE_LEN : NATURAL := 7;
 	type return_data is array (NATURAL range <>) of std_logic_vector(BITNESS-1 downto 0);
 	
 	

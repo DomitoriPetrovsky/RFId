@@ -12,6 +12,8 @@ entity iir_filter_exp_averaging is
 		CWL			: NATURAL);
 	port(
 		clk			: in	std_logic;
+		nrst 		: in 	std_logic;
+		ce			: in 	std_logic;
 		coef		: in	std_logic_vector(CWL-1 downto 0);
 		input 		: in	std_logic_vector(BITNESS-1 downto 0);
 		output		: out	std_logic_vector(BITNESS-1 downto 0));
@@ -45,9 +47,11 @@ begin
 u2: process(clk)
 	begin 
 		if rising_edge(clk) then 
-		
-			delay <= sum_1;
-		
+			if nrst = '0' then 
+				delay <= (others => '0');
+			elsif ce = '1' then 
+				delay <= sum_1;
+			end if;
 		end if;
 	
 	end process;

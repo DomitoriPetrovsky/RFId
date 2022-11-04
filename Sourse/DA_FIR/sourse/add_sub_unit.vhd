@@ -9,7 +9,7 @@ entity add_sub_unit is
 	generic(
 		IWL			: NATURAL := 16);
 	port(
-		add_sub			: in 	std_logic;
+		add_sub		: in 	std_logic;
 		A	 		: in	std_logic_vector(IWL-1 downto 0);		
 		B	 		: in	std_logic_vector(IWL-1 downto 0);
 		C			: out	std_logic_vector(IWL-1 downto 0));

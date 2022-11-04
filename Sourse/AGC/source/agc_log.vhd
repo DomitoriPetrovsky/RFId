@@ -9,19 +9,21 @@ use work.pkg_log_func.all;
 
 entity agc_log is 
 	generic(
-		BITNESS : NATURAL;
-		IIR_WCL : NATURAL;
-		TABLE_LENGTH : NATURAL);
+		BITNESS 		: NATURAL;
+		IIR_WCL 		: NATURAL;
+		TABLE_LENGTH 	: NATURAL;
+		LogWL			: NATURAL);
 	port(
-		--reset	: in	std_logic;
-		--en		: in	std_logic;
-		clk		: in	std_logic;
-		wr_coef	: in 	std_logic;
-		input 	: in	std_logic_vector(BITNESS-1 downto 0);
-		R	 	: in 	std_logic_vector(BITNESS-1 downto 0);
-		alfa 	: in 	std_logic_vector(BITNESS-1 downto 0);
-		iir_coef: in 	std_logic_vector(IIR_WCL-1 downto 0);
-		output	: out	std_logic_vector(BITNESS-1 downto 0));
+		clk			: in	std_logic;
+		nrst		: in	std_logic;
+		ce			: in	std_logic;
+		wr_coef		: in 	std_logic;
+		input 		: in	std_logic_vector(BITNESS-1 downto 0);
+		R	 		: in 	std_logic_vector(LogWL-1 downto 0);
+		alfa 		: in 	std_logic_vector(BITNESS-1 downto 0);
+		iir_coef	: in 	std_logic_vector(IIR_WCL-1 downto 0);
+		log_in_sig 	: out 	std_logic_vector(LogWL-1 downto 0);
+		output		: out	std_logic_vector(BITNESS-1 downto 0));
 end agc_log;
 
 architecture rtl of agc_log is
@@ -48,6 +50,8 @@ architecture rtl of agc_log is
 		CWL			: NATURAL);
 	port(
 		clk			: in	std_logic;
+		nrst		: in 	std_logic;
+		ce			: in 	std_logic;
 		coef		: in	std_logic_vector(CWL-1 downto 0);
 		input 		: in	std_logic_vector(BITNESS-1 downto 0);
 		output		: out	std_logic_vector(BITNESS-1 downto 0));
@@ -78,7 +82,7 @@ architecture rtl of agc_log is
 		);
 	end component;
 
-	constant LogWL: NATURAL:= log_len(BITNESS);
+	--constant LogWL: NATURAL:= log_len(BITNESS);
 
 
 	signal temp_out 	: std_logic_vector(BITNESS-1 downto 0)				:= (others => '0');
@@ -114,7 +118,11 @@ begin
 	process(clk)
 	begin 
 		if(rising_edge(clk)) then 
-			temp_in <= input;
+			if nrst = '0' then 
+				temp_in <= (others =>  '0');
+			elsif ce = '1' then
+				temp_in <= input;
+			end if;
 		end if;
 	end process;
 	
@@ -126,7 +134,8 @@ begin
 	begin 
 		if(rising_edge(clk)) then 
 			if(wr_coef = '1') then
-				rg_R <= std_logic_vector(resize(signed(R), rg_R'length) sll 4);
+				--rg_R <= std_logic_vector(resize(signed(R), rg_R'length) sll 4);
+				rg_R <= R;
 				rg_alfa <= resize(signed(alfa), rg_alfa'length);
 			end if;
 		end if;
@@ -161,12 +170,15 @@ exp: exp2	generic map(BITNESS => BITNESS,
 	-------------------
 	--iir filter
 	-------------------
-iir: iir_filter_exp_averaging 	generic map(BITNESS => BITNESS,
-											CWL => IIR_WCL)
-								port map(	clk => clk,
-											coef => iir_coef, 
-											input => std_logic_vector(after_squaer), 
-											output => iir_filter);
+iir: iir_filter_exp_averaging 	
+			generic map(BITNESS => BITNESS,
+						CWL 	=> IIR_WCL)
+			port map(	clk 	=> clk,
+						nrst 	=> nrst,
+						ce 		=> ce,
+						coef 	=> iir_coef, 
+						input 	=> std_logic_vector(after_squaer), 
+						output 	=> iir_filter);
 	
 	
 	-------------------
@@ -184,11 +196,12 @@ log: log2 	generic map(BITNESS => BITNESS,
 	-------------------
 	--отличиет от уровня 
 	-------------------
-subR: add_sgn_sat 	generic map(IWL => LogWL, 
-								sub => TRUE)
-					port map(A => rg_R,
-							 B => after_log,
-							 C => after_r);
+subR: add_sgn_sat 	
+			generic map(IWL => LogWL, 
+						sub => TRUE)
+			port map(	A 	=> rg_R,
+						B 	=> after_log,
+						C 	=> after_r);
 	--after_r <= signed(rg_R) - signed(after_log); 
 	
 	-------------------
@@ -210,11 +223,12 @@ subR: add_sgn_sat 	generic map(IWL => LogWL,
 	-------------------
 	--adder with overflow control 
 	-------------------
-addA: add_sgn_sat 	generic map(IWL => LogWL, 
-								sub => FALSE)
-					port map(A => delay,
-							 B => short_after_a,
-							 C => summ);
+addA: add_sgn_sat 	
+		generic map(IWL => LogWL, 
+					sub => FALSE)
+		port map(A => delay,
+				 B => short_after_a,
+				 C => summ);
 
 	
 	-------------------
@@ -223,7 +237,11 @@ addA: add_sgn_sat 	generic map(IWL => LogWL,
 z: process(clk)
 	begin
 		if(rising_edge(clk)) then
-			delay <= summ;
+			if nrst = '0' then 
+				delay <= (others => '0');
+			elsif ce = '1' then 
+				delay <= summ;
+			end if;
 		end if;
 	end process;
 	
@@ -232,5 +250,5 @@ z: process(clk)
 	--result ;)
 	-------------------
 	output <= std_logic_vector(temp_out);
-	
+	log_in_sig <= after_log;
 end rtl;

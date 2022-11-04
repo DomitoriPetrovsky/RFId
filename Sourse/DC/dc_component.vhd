@@ -13,6 +13,8 @@ entity dc_component is
 	port(
 		clk		: in	std_logic;
 		wr_coef	: in 	std_logic;
+		ce		: in 	std_logic;
+		nrst	: in 	std_logic;
 		A 		: in 	std_logic_vector(IWL-1 downto 0);
 		input 	: in	std_logic_vector(IWL-1 downto 0);
 		output	: out	std_logic_vector(IWL-1 downto 0));
@@ -55,13 +57,17 @@ begin
 	process(clk)
 	begin 
 		if(rising_edge(clk)) then 
-			temp_in <= input;
+			if nrst = '0' then 
+				temp_in <= (others => '0');
+			elsif ce = '1' then 
+				temp_in <= input;
+			end if;
 		end if;
 	end process;
 	
 	
 	-------------------
-	--writing coef R and Alfa
+	--writing Alfa
 	-------------------
 	process(clk)
 	begin 
@@ -87,11 +93,16 @@ add1: add_sgn_sat 	generic map(IWL => IWL, sub => false )
 	
 	process(clk)
 	begin 
-		if(rising_edge(clk)) then 
-			rg_ConstComp <= ConstComp;
+		if(rising_edge(clk)) then
+			if nrst = '0' then 
+				rg_ConstComp <= (others => '0');
+			elsif ce = '1' then
+				rg_ConstComp <= ConstComp;
+			end if;
 		end if;
 	end process;
 	
 	output <= temp_out;
+	
 	
 end rtl;
